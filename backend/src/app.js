@@ -46,19 +46,18 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/standtrack';
 
-mongoose.connect(MONGO_URI)
-  .then(() => {
-    console.log('✅ Connected to MongoDB');
-
-    startCronJobs();
-
-    app.listen(PORT, () => {
-      console.log(`🚀 StandTrack API running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 StandTrack API running on port ${PORT}`);
+  
+  mongoose.connect(MONGO_URI)
+    .then(() => {
+      console.log('✅ Connected to MongoDB');
+      startCronJobs();
+    })
+    .catch((err) => {
+      console.error('❌ MongoDB connection error:', err.message);
+      console.error('⚠️  Server is running but database connection failed. Please check your MONGO_URI and IP whitelist.');
     });
-  })
-  .catch((err) => {
-    console.error('❌ MongoDB connection error:', err.message);
-    process.exit(1);
-  });
+});
 
 module.exports = app;
