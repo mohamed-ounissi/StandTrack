@@ -74,7 +74,6 @@ export const entriesAPI = {
   delete: (id: string) => api.delete(`/entries/${id}`),
 };
 
-// Settings API
 export const settingsAPI = {
   // Get all settings
   getSettings: () => api.get('/settings'),
