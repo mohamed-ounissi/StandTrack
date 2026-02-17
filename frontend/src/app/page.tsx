@@ -42,7 +42,7 @@ export default function Home() {
           </p>
           <p className="text-slate-500 mb-10 max-w-xl mx-auto">
             A lightweight tool to help developers prepare structured daily standup updates
-            in under 2 minutes. No more scrambling at 3:30 PM.
+            in under 2 minutes. No more scrambling at daily meetings 😂.
           </p>
 
           <div className="flex items-center justify-center gap-4">

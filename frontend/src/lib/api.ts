@@ -1,6 +1,15 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+const getApiUrl = () => {
+
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  return 'http://localhost:5000/api';
+};
+
+const API_URL = getApiUrl();
 
 const api = axios.create({
   baseURL: API_URL,
@@ -65,7 +74,6 @@ export const entriesAPI = {
   delete: (id: string) => api.delete(`/entries/${id}`),
 };
 
-// Settings API
 export const settingsAPI = {
   // Get all settings
   getSettings: () => api.get('/settings'),
@@ -85,7 +93,7 @@ export const settingsAPI = {
     api.delete(`/settings/meeting-override/${date}`),
 
   // Reminders
-  updateReminders: (data: { enabled: boolean; email?: string; times?: string[] }) =>
+  updateReminders: (data: { enabled: boolean; email?: string; times?: string[]; timezone?: string }) =>
     api.put('/settings/reminders', data),
 };
 

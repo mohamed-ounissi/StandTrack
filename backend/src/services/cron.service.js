@@ -2,56 +2,96 @@ const cron = require('node-cron');
 const User = require('../models/User');
 const Entry = require('../models/Entry');
 const MeetingOverride = require('../models/MeetingOverride');
+const ReminderLog = require('../models/ReminderLog');
 const { sendReminderEmail } = require('./email.service');
 
-const sentReminders = new Map();
+const getTimeInTimezone = (timezone) => {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+  return formatter.format(now);
+};
 
-const resetDailyTracking = () => {
-  const today = new Date().toISOString().split('T')[0];
-  for (const [key, date] of sentReminders.entries()) {
-    if (date !== today) {
-      sentReminders.delete(key);
-    }
-  }
+
+const getDateInTimezone = (timezone) => {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: timezone });
+  return formatter.format(now);
 };
 
 const checkAndSendReminders = async () => {
   try {
-    const now = new Date();
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    const today = now.toISOString().split('T')[0];
-
-    resetDailyTracking();
-
     const users = await User.find({
       'reminderSettings.enabled': true,
       'reminderSettings.times': { $exists: true, $not: { $size: 0 } }
     });
 
+    if (users.length === 0) return;
+
+    const userIds = users.map(u => u._id);
+
+    const entries = await Entry.find({
+      userId: { $in: userIds },
+      tasks: { $exists: true, $ne: '' }
+    });
+    const entriesByUser = new Map();
+    entries.forEach(entry => {
+      entriesByUser.set(entry.userId.toString(), entry);
+    });
+
+    const overrides = await MeetingOverride.find({ userId: { $in: userIds } });
+    const overridesByUser = new Map();
+    overrides.forEach(override => {
+      const userId = override.userId.toString();
+      if (!overridesByUser.has(userId)) {
+        overridesByUser.set(userId, []);
+      }
+      overridesByUser.get(userId).push(override);
+    });
+
     for (const user of users) {
+      const timezone = user.timezone || 'UTC';
+      const localTime = getTimeInTimezone(timezone);
+      const localDate = getDateInTimezone(timezone);
       const { reminderSettings } = user;
 
+      const sentReminders = await ReminderLog.find({
+        userId: user._id,
+        date: localDate
+      });
+      const sentTimes = new Set(sentReminders.map(r => r.reminderTime));
+
       for (const reminderTime of reminderSettings.times) {
-        if (reminderTime !== currentTime) continue;
+        if (reminderTime !== localTime) continue;
+        if (sentTimes.has(reminderTime)) continue;
 
-        const trackingKey = `${user._id}-${reminderTime}`;
-        if (sentReminders.get(trackingKey) === today) continue;
-
-        const todayEntry = await Entry.findOne({ userId: user._id, date: today });
-        if (todayEntry && todayEntry.tasks) {
-          sentReminders.set(trackingKey, today);
+        const userEntry = entriesByUser.get(user._id.toString());
+        if (userEntry && userEntry.date === localDate && userEntry.tasks) {
+          await ReminderLog.create({
+            userId: user._id,
+            reminderTime,
+            date: localDate
+          }).catch(() => {});
           continue;
         }
 
-        const override = await MeetingOverride.findOne({ userId: user._id, date: today });
-        const meetingTime = override ? override.meetingTime : user.defaultMeetingTime;
-
+        const userOverrides = overridesByUser.get(user._id.toString()) || [];
+        const todayOverride = userOverrides.find(o => o.date === localDate);
+        const meetingTime = todayOverride ? todayOverride.meetingTime : user.defaultMeetingTime;
         const recipientEmail = reminderSettings.email || user.email;
 
         try {
           await sendReminderEmail(recipientEmail, user.name, meetingTime);
-          sentReminders.set(trackingKey, today);
-          console.log(`✅ Reminder sent to ${user.name} (${recipientEmail}) at ${currentTime}`);
+          await ReminderLog.create({
+            userId: user._id,
+            reminderTime,
+            date: localDate
+          });
+          console.log(`✅ Reminder sent to ${user.name} (${recipientEmail}) at ${localTime} (${timezone})`);
         } catch (error) {
           console.error(`❌ Failed to send reminder to ${user.name}:`, error.message);
         }

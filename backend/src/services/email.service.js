@@ -20,7 +20,6 @@ const sendReminderEmail = async (toEmail, userName, meetingTime) => {
   }
 
   const transporter = createTransporter();
-
   const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
 
   const [hours, minutes] = meetingTime.split(':');
@@ -75,4 +74,3 @@ const sendReminderEmail = async (toEmail, userName, meetingTime) => {
 };
 
 module.exports = { sendReminderEmail };
-

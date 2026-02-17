@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: standtrack-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      # The following should be set manually in Render Dashboard:
+      # - MONGO_URI (MongoDB Atlas connection string)
+      # - JWT_SECRET (generate a strong random string)
+      # - JWT_EXPIRES_IN (e.g., 7d)
+      # - FRONTEND_URL (your Vercel frontend URL)
+      # - SMTP_HOST (smtp.gmail.com)
+      # - SMTP_PORT (587)
+      # - SMTP_SECURE (false)
+      # - SMTP_USER (your Gmail address)
+      # - SMTP_PASS (Gmail App Password)
+      # - SMTP_FROM (your Gmail address)
+

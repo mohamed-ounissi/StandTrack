@@ -142,10 +142,14 @@ export default function SettingsPage() {
     const handleSaveReminders = async () => {
         setSavingReminders(true);
         try {
+            // Automatically detect user's timezone
+            const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            
             await settingsAPI.updateReminders({
                 enabled: remindersEnabled,
                 email: reminderEmail,
-                times: reminderTimes
+                times: reminderTimes,
+                timezone: userTimezone
             });
             toast.success('Reminder settings saved!');
         } catch (error: unknown) {

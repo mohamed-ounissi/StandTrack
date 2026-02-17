@@ -33,6 +33,17 @@ const updateReminderSchema = Joi.object({
     })
   ).max(3).optional().messages({
     'array.max': 'Maximum 3 reminder times allowed'
+  }),
+  timezone: Joi.string().optional().custom((value, helpers) => {
+    if (!value) return value;
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone: value });
+      return value;
+    } catch {
+      return helpers.error('any.invalid');
+    }
+  }).messages({
+    'any.invalid': 'Invalid timezone identifier. Use IANA timezone format (e.g., "Africa/Tunis", "America/New_York")'
   })
 });
 
