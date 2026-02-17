@@ -32,13 +32,17 @@ const getLocalDateTime = (timezone = 'UTC') => {
 
 const checkAndSendReminders = async () => {
   try {
-
     const users = await User.find({
       'reminderSettings.enabled': true,
       'reminderSettings.times': { $exists: true, $not: { $size: 0 } }
     });
 
-    if (users.length === 0) return;
+    if (users.length === 0) {
+      console.log('⏰ [Cron] No users with reminders enabled');
+      return;
+    }
+
+    console.log(`⏰ [Cron] Checking reminders for ${users.length} user(s)`);
     const usersByTimezone = new Map();
 
     for (const user of users) {
@@ -54,6 +58,8 @@ const checkAndSendReminders = async () => {
     for (const [timezone, timezoneUsers] of usersByTimezone.entries()) {
       const { date: localDate, time: localTime } = getLocalDateTime(timezone);
       const timezoneUserIds = timezoneUsers.map(u => u._id);
+
+      console.log(`⏰ [Cron] Processing timezone ${timezone} - Current time: ${localTime}, Date: ${localDate}`);
 
       const todayEntries = await Entry.find({
         userId: { $in: timezoneUserIds },
@@ -90,16 +96,23 @@ const checkAndSendReminders = async () => {
         const userTodayEntry = entriesByUser.get(user._id.toString());
         const userOverride = overridesByUser.get(user._id.toString());
 
+        console.log(`⏰ [Cron] User: ${user.name}, Reminder times: ${reminderSettings.times.join(', ')}, Timezone: ${timezone}`);
+
         for (const reminderTime of reminderSettings.times) {
-          if (reminderTime !== localTime) continue;
+          if (reminderTime !== localTime) {
+            console.log(`⏰ [Cron] Skipping ${user.name} - reminder time ${reminderTime} !== current time ${localTime}`);
+            continue;
+          }
 
           const trackingKey = `${user._id}-${reminderTime}`;
 
-          if (sentRemindersSet.has(trackingKey)) continue;
-
+          if (sentRemindersSet.has(trackingKey)) {
+            console.log(`⏰ [Cron] Skipping ${user.name} - reminder already sent today`);
+            continue;
+          }
 
           if (userTodayEntry && userTodayEntry.tasks) {
-
+            console.log(`⏰ [Cron] Skipping ${user.name} - already has tasks for today`);
             reminderPromises.push(
               ReminderLog.create({
                 userId: user._id,
@@ -110,9 +123,10 @@ const checkAndSendReminders = async () => {
             continue;
           }
 
-
           const meetingTime = userOverride ? userOverride.meetingTime : user.defaultMeetingTime;
           const recipientEmail = reminderSettings.email || user.email;
+
+          console.log(`⏰ [Cron] Sending reminder to ${user.name} (${recipientEmail}) at ${localTime} (${timezone})`);
 
           reminderPromises.push(
             (async () => {
@@ -128,6 +142,7 @@ const checkAndSendReminders = async () => {
                 );
               } catch (error) {
                 console.error(`❌ Failed to send reminder to ${user.name}:`, error.message);
+                console.error(error.stack);
               }
             })()
           );
@@ -138,6 +153,7 @@ const checkAndSendReminders = async () => {
     await Promise.all(reminderPromises);
   } catch (error) {
     console.error('❌ Cron job error:', error.message);
+    console.error(error.stack);
   }
 };
 
@@ -149,5 +165,11 @@ const startCronJobs = () => {
   console.log('⏰ Reminder cron job started (checking every minute)');
 };
 
-module.exports = { startCronJobs };
+// Manual test function - can be called to test reminders immediately
+const testReminders = async () => {
+  console.log('🧪 [Test] Manually triggering reminder check...');
+  await checkAndSendReminders();
+};
+
+module.exports = { startCronJobs, testReminders };
 
