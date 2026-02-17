@@ -93,7 +93,7 @@ export const settingsAPI = {
     api.delete(`/settings/meeting-override/${date}`),
 
   // Reminders
-  updateReminders: (data: { enabled: boolean; email?: string; times?: string[] }) =>
+  updateReminders: (data: { enabled: boolean; email?: string; times?: string[]; timezone?: string }) =>
     api.put('/settings/reminders', data),
 };
 

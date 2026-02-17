@@ -1,7 +1,6 @@
 const User = require('../models/User');
 const MeetingOverride = require('../models/MeetingOverride');
 
-
 const getSettings = async (userId) => {
   const user = await User.findById(userId);
   if (!user) {
@@ -29,9 +28,7 @@ const updateDefaultMeetingTime = async (userId, meetingTime) => {
   return user.toJSON();
 };
 
-
 const getMeetingTimeForDate = async (userId, date) => {
-
   const override = await MeetingOverride.findOne({ userId, date });
   if (override) {
     return { meetingTime: override.meetingTime, isOverride: true };
@@ -65,7 +62,6 @@ const getMeetingOverrides = async (userId) => {
   return MeetingOverride.find({ userId, date: { $gte: today } }).sort({ date: 1 });
 };
 
-
 const updateReminderSettings = async (userId, settings) => {
   const updateData = {};
 
@@ -78,8 +74,10 @@ const updateReminderSettings = async (userId, settings) => {
   if (settings.times !== undefined) {
     updateData['reminderSettings.times'] = settings.times;
   }
+  if (settings.timezone !== undefined) {
+    updateData.timezone = settings.timezone;
+  }
 
-  // Ensure timezone field exists (for existing users who don't have it)
   const user = await User.findById(userId);
   if (!user) {
     const error = new Error('User not found');
@@ -87,8 +85,7 @@ const updateReminderSettings = async (userId, settings) => {
     throw error;
   }
 
-  // If timezone doesn't exist, set it to UTC
-  if (!user.timezone) {
+  if (!user.timezone && !updateData.timezone) {
     updateData.timezone = 'UTC';
   }
 

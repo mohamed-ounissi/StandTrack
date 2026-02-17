@@ -24,7 +24,7 @@ const reminderLogSchema = new mongoose.Schema({
 
 reminderLogSchema.index({ userId: 1, reminderTime: 1, date: 1 }, { unique: true });
 
-reminderLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 604800 }); // 7 days
+reminderLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 604800 });
 
 module.exports = mongoose.model('ReminderLog', reminderLogSchema);
 
