@@ -26,14 +26,7 @@ const sendReminderEmail = async (toEmail, userName, meetingTime) => {
 
   const transporter = createTransporter();
   
-  console.log(`[DEBUG Email] Verifying SMTP connection...`);
-  try {
-    await transporter.verify();
-    console.log(`[DEBUG Email] SMTP connection verified successfully`);
-  } catch (verifyError) {
-    console.error(`[DEBUG Email] SMTP verification failed:`, verifyError.message);
-    throw new Error(`SMTP connection failed: ${verifyError.message}`);
-  }
+  console.log(`[DEBUG Email] Skipping SMTP verification (can cause hangs). Will attempt to send directly.`);
 
   const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
 
