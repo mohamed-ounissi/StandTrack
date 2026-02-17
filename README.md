@@ -191,7 +191,7 @@ Navigate to [http://localhost:3000](http://localhost:3000) in your browser. Regi
 
 ## Live Version
 
-> Coming soon — URL will be added after deployment.
+🌐 **Live App:** [https://stand-track.vercel.app/](https://stand-track.vercel.app/)
 
 ## Future Improvements
 
