@@ -40,6 +40,21 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: '15:30'
   },
+  timezone: {
+    type: String,
+    default: 'UTC',
+    validate: {
+      validator: function (v) {
+        try {
+          Intl.DateTimeFormat(undefined, { timeZone: v });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      message: 'Invalid timezone identifier'
+    }
+  },
   reminderSettings: {
     type: reminderSchema,
     default: () => ({
