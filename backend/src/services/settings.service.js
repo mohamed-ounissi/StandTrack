@@ -79,19 +79,26 @@ const updateReminderSettings = async (userId, settings) => {
     updateData['reminderSettings.times'] = settings.times;
   }
 
-  const user = await User.findByIdAndUpdate(
-    userId,
-    { $set: updateData },
-    { new: true, runValidators: true }
-  );
-
+  // Ensure timezone field exists (for existing users who don't have it)
+  const user = await User.findById(userId);
   if (!user) {
     const error = new Error('User not found');
     error.status = 404;
     throw error;
   }
 
-  return user.toJSON();
+  // If timezone doesn't exist, set it to UTC
+  if (!user.timezone) {
+    updateData.timezone = 'UTC';
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  );
+
+  return updatedUser.toJSON();
 };
 
 module.exports = {

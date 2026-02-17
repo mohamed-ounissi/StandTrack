@@ -30,7 +30,12 @@ const checkAndSendReminders = async () => {
       'reminderSettings.times': { $exists: true, $not: { $size: 0 } }
     });
 
-    if (users.length === 0) return;
+    if (users.length === 0) {
+      console.log('⏰ [Cron] No users with reminders enabled');
+      return;
+    }
+
+    console.log(`⏰ [Cron] Checking ${users.length} user(s) with reminders enabled`);
 
     const userIds = users.map(u => u._id);
 
@@ -59,6 +64,8 @@ const checkAndSendReminders = async () => {
       const localDate = getDateInTimezone(timezone);
       const { reminderSettings } = user;
 
+      console.log(`⏰ [Cron] User: ${user.name}, Timezone: ${timezone}, Local time: ${localTime}, Local date: ${localDate}, Reminder times: ${reminderSettings.times.join(', ')}`);
+
       const sentReminders = await ReminderLog.find({
         userId: user._id,
         date: localDate
@@ -66,11 +73,18 @@ const checkAndSendReminders = async () => {
       const sentTimes = new Set(sentReminders.map(r => r.reminderTime));
 
       for (const reminderTime of reminderSettings.times) {
-        if (reminderTime !== localTime) continue;
-        if (sentTimes.has(reminderTime)) continue;
+        if (reminderTime !== localTime) {
+          console.log(`⏰ [Cron] ${user.name}: Skipping - reminder time ${reminderTime} !== current time ${localTime}`);
+          continue;
+        }
+        if (sentTimes.has(reminderTime)) {
+          console.log(`⏰ [Cron] ${user.name}: Skipping - reminder already sent today`);
+          continue;
+        }
 
         const userEntry = entriesByUser.get(user._id.toString());
         if (userEntry && userEntry.date === localDate && userEntry.tasks) {
+          console.log(`⏰ [Cron] ${user.name}: Skipping - already has tasks for today`);
           await ReminderLog.create({
             userId: user._id,
             reminderTime,
@@ -84,6 +98,8 @@ const checkAndSendReminders = async () => {
         const meetingTime = todayOverride ? todayOverride.meetingTime : user.defaultMeetingTime;
         const recipientEmail = reminderSettings.email || user.email;
 
+        console.log(`⏰ [Cron] ${user.name}: Sending reminder to ${recipientEmail} at ${localTime} (${timezone})`);
+
         try {
           await sendReminderEmail(recipientEmail, user.name, meetingTime);
           await ReminderLog.create({
@@ -94,11 +110,13 @@ const checkAndSendReminders = async () => {
           console.log(`✅ Reminder sent to ${user.name} (${recipientEmail}) at ${localTime} (${timezone})`);
         } catch (error) {
           console.error(`❌ Failed to send reminder to ${user.name}:`, error.message);
+          console.error(error.stack);
         }
       }
     }
   } catch (error) {
     console.error('❌ Cron job error:', error.message);
+    console.error(error.stack);
   }
 };
 
