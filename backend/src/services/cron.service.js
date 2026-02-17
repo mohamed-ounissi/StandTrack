@@ -59,29 +59,18 @@ const checkAndSendReminders = async () => {
       const localDate = getDateInTimezone(timezone);
       const { reminderSettings } = user;
 
-      console.log(`[DEBUG] User: ${user.name}, Timezone: ${timezone}, Local time: ${localTime}, Local date: ${localDate}, Reminder times: ${reminderSettings.times.join(', ')}`);
-
       const sentReminders = await ReminderLog.find({
         userId: user._id,
         date: localDate
       });
       const sentTimes = new Set(sentReminders.map(r => r.reminderTime));
-      console.log(`[DEBUG] Already sent reminders today: ${Array.from(sentTimes).join(', ') || 'none'}`);
 
       for (const reminderTime of reminderSettings.times) {
-        console.log(`[DEBUG] Checking reminder time: ${reminderTime} vs current time: ${localTime}`);
-        if (reminderTime !== localTime) {
-          console.log(`[DEBUG] Time mismatch, skipping`);
-          continue;
-        }
-        if (sentTimes.has(reminderTime)) {
-          console.log(`[DEBUG] Already sent today, skipping`);
-          continue;
-        }
+        if (reminderTime !== localTime) continue;
+        if (sentTimes.has(reminderTime)) continue;
 
         const userEntry = entriesByUser.get(user._id.toString());
         if (userEntry && userEntry.date === localDate && userEntry.tasks) {
-          console.log(`[DEBUG] User already has tasks for today, skipping`);
           await ReminderLog.create({
             userId: user._id,
             reminderTime,
@@ -95,23 +84,16 @@ const checkAndSendReminders = async () => {
         const meetingTime = todayOverride ? todayOverride.meetingTime : user.defaultMeetingTime;
         const recipientEmail = reminderSettings.email || user.email;
 
-        console.log(`[DEBUG] Attempting to send reminder to ${recipientEmail}`);
         try {
-          console.log(`[DEBUG] Calling sendReminderEmail...`);
-          const emailResult = await sendReminderEmail(recipientEmail, user.name, meetingTime);
-          console.log(`[DEBUG] Email service returned:`, emailResult);
-          console.log(`[DEBUG] Creating ReminderLog...`);
+          await sendReminderEmail(recipientEmail, user.name, meetingTime);
           await ReminderLog.create({
             userId: user._id,
             reminderTime,
             date: localDate
           });
-          console.log(`[DEBUG] ReminderLog created successfully`);
           console.log(`✅ Reminder sent to ${user.name} (${recipientEmail}) at ${localTime} (${timezone})`);
         } catch (error) {
           console.error(`❌ Failed to send reminder to ${user.name}:`, error.message);
-          console.error(`[DEBUG] Error details:`, error);
-          console.error(`[DEBUG] Error stack:`, error.stack);
         }
       }
     }
