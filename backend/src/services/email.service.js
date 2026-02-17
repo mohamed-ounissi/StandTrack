@@ -13,11 +13,16 @@ const createTransporter = () => {
 };
 
 const sendReminderEmail = async (toEmail, userName, meetingTime) => {
+  console.log(`[DEBUG Email] Starting sendReminderEmail to ${toEmail}`);
+  console.log(`[DEBUG Email] SMTP_USER exists: ${!!process.env.SMTP_USER}, SMTP_PASS exists: ${!!process.env.SMTP_PASS}`);
+  
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.log(`📧 [MOCK] Reminder email to ${toEmail} — Meeting at ${meetingTime}`);
     console.log(`   Hey ${userName}, don't forget to log your standup before ${meetingTime}!`);
     return { mock: true, to: toEmail };
   }
+  
+  console.log(`[DEBUG Email] Using real SMTP, creating transporter...`);
 
   const transporter = createTransporter();
 
@@ -65,11 +70,14 @@ const sendReminderEmail = async (toEmail, userName, meetingTime) => {
   };
 
   try {
+    console.log(`[DEBUG Email] Sending mail with options:`, { to: mailOptions.to, subject: mailOptions.subject });
     const info = await transporter.sendMail(mailOptions);
     console.log(`📧 Reminder sent to ${toEmail} — Message ID: ${info.messageId}`);
+    console.log(`[DEBUG Email] Email sent successfully`);
     return info;
   } catch (error) {
     console.error(`❌ Failed to send email to ${toEmail}:`, error.message);
+    console.error(`[DEBUG Email] Error details:`, error);
     throw error;
   }
 };

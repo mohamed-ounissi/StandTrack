@@ -97,7 +97,8 @@ const checkAndSendReminders = async () => {
 
         console.log(`[DEBUG] Attempting to send reminder to ${recipientEmail}`);
         try {
-          await sendReminderEmail(recipientEmail, user.name, meetingTime);
+          const emailResult = await sendReminderEmail(recipientEmail, user.name, meetingTime);
+          console.log(`[DEBUG] Email service returned:`, emailResult);
           await ReminderLog.create({
             userId: user._id,
             reminderTime,
@@ -106,6 +107,7 @@ const checkAndSendReminders = async () => {
           console.log(`✅ Reminder sent to ${user.name} (${recipientEmail}) at ${localTime} (${timezone})`);
         } catch (error) {
           console.error(`❌ Failed to send reminder to ${user.name}:`, error.message);
+          console.error(`[DEBUG] Error details:`, error);
           console.error(error.stack);
         }
       }
