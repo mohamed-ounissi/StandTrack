@@ -25,6 +25,15 @@ const sendReminderEmail = async (toEmail, userName, meetingTime) => {
   console.log(`[DEBUG Email] Using real SMTP, creating transporter...`);
 
   const transporter = createTransporter();
+  
+  console.log(`[DEBUG Email] Verifying SMTP connection...`);
+  try {
+    await transporter.verify();
+    console.log(`[DEBUG Email] SMTP connection verified successfully`);
+  } catch (verifyError) {
+    console.error(`[DEBUG Email] SMTP verification failed:`, verifyError.message);
+    throw new Error(`SMTP connection failed: ${verifyError.message}`);
+  }
 
   const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
 
@@ -71,13 +80,20 @@ const sendReminderEmail = async (toEmail, userName, meetingTime) => {
 
   try {
     console.log(`[DEBUG Email] Sending mail with options:`, { to: mailOptions.to, subject: mailOptions.subject });
-    const info = await transporter.sendMail(mailOptions);
+    
+    const sendPromise = transporter.sendMail(mailOptions);
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Email send timeout after 10 seconds')), 10000);
+    });
+    
+    const info = await Promise.race([sendPromise, timeoutPromise]);
     console.log(`📧 Reminder sent to ${toEmail} — Message ID: ${info.messageId}`);
     console.log(`[DEBUG Email] Email sent successfully`);
     return info;
   } catch (error) {
     console.error(`❌ Failed to send email to ${toEmail}:`, error.message);
     console.error(`[DEBUG Email] Error details:`, error);
+    console.error(`[DEBUG Email] Error stack:`, error.stack);
     throw error;
   }
 };
